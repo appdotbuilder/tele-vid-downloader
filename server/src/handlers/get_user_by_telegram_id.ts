@@ -1,8 +1,23 @@
+import { db } from '../db';
+import { usersTable } from '../db/schema';
 import { type User } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export async function getUserByTelegramId(telegramId: string): Promise<User | null> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching a user by their Telegram ID for authentication.
-    // Should return null if user doesn't exist.
-    return Promise.resolve(null);
+  try {
+    const result = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.telegram_id, telegramId))
+      .execute();
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    // Return the first (and should be only) user found
+    return result[0];
+  } catch (error) {
+    console.error('Failed to get user by telegram ID:', error);
+    throw error;
+  }
 }

@@ -1,34 +1,92 @@
+import { db } from '../db';
+import { whitelistTable, usersTable } from '../db/schema';
 import { type CreateWhitelistInput, type Whitelist } from '../schema';
+import { eq, and } from 'drizzle-orm';
 
 export async function addToWhitelist(input: CreateWhitelistInput): Promise<Whitelist> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is adding a Telegram ID to the login whitelist.
-    // Should check if already exists and handle duplicates gracefully.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
+  try {
+    // First, verify that the user who is adding exists
+    const addingUser = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.id, input.added_by_user_id))
+      .limit(1)
+      .execute();
+
+    if (addingUser.length === 0) {
+      throw new Error(`User with ID ${input.added_by_user_id} does not exist`);
+    }
+
+    // Check if the telegram_id is already whitelisted
+    const existing = await db.select()
+      .from(whitelistTable)
+      .where(eq(whitelistTable.telegram_id, input.telegram_id))
+      .limit(1)
+      .execute();
+
+    if (existing.length > 0) {
+      // Return the existing whitelist entry instead of creating a duplicate
+      return existing[0];
+    }
+
+    // Add new entry to whitelist
+    const result = await db.insert(whitelistTable)
+      .values({
         telegram_id: input.telegram_id,
-        added_by_user_id: input.added_by_user_id,
-        created_at: new Date()
-    } as Whitelist);
+        added_by_user_id: input.added_by_user_id
+      })
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Failed to add to whitelist:', error);
+    throw error;
+  }
 }
 
 export async function removeFromWhitelist(telegramId: string): Promise<boolean> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is removing a Telegram ID from the login whitelist.
-    // Should return true if successfully removed, false if not found.
-    return Promise.resolve(true);
+  try {
+    const result = await db.delete(whitelistTable)
+      .where(eq(whitelistTable.telegram_id, telegramId))
+      .returning()
+      .execute();
+
+    return result.length > 0;
+  } catch (error) {
+    console.error('Failed to remove from whitelist:', error);
+    throw error;
+  }
 }
 
 export async function getWhitelist(): Promise<Whitelist[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching all whitelisted Telegram IDs.
-    // Should include information about who added each entry.
-    return Promise.resolve([]);
+  try {
+    const results = await db.select({
+      id: whitelistTable.id,
+      telegram_id: whitelistTable.telegram_id,
+      added_by_user_id: whitelistTable.added_by_user_id,
+      created_at: whitelistTable.created_at
+    })
+      .from(whitelistTable)
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to get whitelist:', error);
+    throw error;
+  }
 }
 
 export async function isWhitelisted(telegramId: string): Promise<boolean> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is checking if a Telegram ID is whitelisted.
-    // Should be used during authentication process.
-    return Promise.resolve(false);
+  try {
+    const result = await db.select()
+      .from(whitelistTable)
+      .where(eq(whitelistTable.telegram_id, telegramId))
+      .limit(1)
+      .execute();
+
+    return result.length > 0;
+  } catch (error) {
+    console.error('Failed to check whitelist status:', error);
+    throw error;
+  }
 }

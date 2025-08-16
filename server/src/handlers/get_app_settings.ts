@@ -1,15 +1,31 @@
+import { db } from '../db';
+import { appSettingsTable } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import { type AppSettings } from '../schema';
 
 export async function getAppSettings(): Promise<AppSettings[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching all application settings.
-    // Should return key-value pairs for theme, logo, public_access, etc.
-    return Promise.resolve([]);
+  try {
+    const results = await db.select()
+      .from(appSettingsTable)
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to fetch app settings:', error);
+    throw error;
+  }
 }
 
 export async function getAppSettingByKey(key: string): Promise<AppSettings | null> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching a specific application setting by key.
-    // Should return null if setting doesn't exist.
-    return Promise.resolve(null);
+  try {
+    const results = await db.select()
+      .from(appSettingsTable)
+      .where(eq(appSettingsTable.key, key))
+      .execute();
+
+    return results[0] || null;
+  } catch (error) {
+    console.error('Failed to fetch app setting by key:', error);
+    throw error;
+  }
 }
